@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project Progress Board</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="app-header">
+    <button class="sample-tab" type="button">Sample</button>
+    <div class="header-main">
+      <h1>Project Progress Board</h1>
+      <div class="header-actions">
+        <button id="addProjectBtn" class="icon-button" type="button" title="Add project">
+          <i class="fa-solid fa-plus"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <section class="project-info">
+      <label>
+        <span>Client Company</span>
+        <input id="customerName" type="text" value="Acme Project Company">
+      </label>
+
+      <div class="controls">
+        <span class="control-title">View Mode</span>
+        <div class="segment-control" aria-label="View mode">
+          <button class="segment-button is-active" type="button" data-view-mode="full">Full Project</button>
+          <button class="segment-button" type="button" data-view-mode="month">This Month</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="board-shell">
+      <div id="boardHead" class="table-head"></div>
+      <div id="projectRows" class="project-rows"></div>
+      <div id="timelineScrollbar" class="timeline-scrollbar" aria-hidden="true">
+        <div class="timeline-scrollbar-inner"></div>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="markerDialog" class="marker-dialog">
+    <form method="dialog" id="markerForm">
+      <h2>Add Flag</h2>
+      <label>
+        <span>Date</span>
+        <input id="markerDate" type="date" required>
+      </label>
+      <label>
+        <span>Label</span>
+        <input id="markerLabel" type="text" maxlength="18" placeholder="Design review" required>
+      </label>
+      <div class="dialog-actions">
+        <button value="cancel" type="button" id="cancelMarkerBtn">Cancel</button>
+        <button value="confirm" type="submit">Add</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
