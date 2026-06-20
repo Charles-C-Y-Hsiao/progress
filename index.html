@@ -6,36 +6,30 @@
   <title>Project Progress Board</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header class="app-header">
-    <button class="sample-tab" type="button">Sample</button>
-    <div class="header-main">
-      <h1>Project Progress Board</h1>
-      <div class="header-actions">
-        <button id="addProjectBtn" class="icon-button" type="button" title="Add project">
-          <i class="fa-solid fa-plus"></i>
-        </button>
-      </div>
-    </div>
-  </header>
-
   <main class="workspace">
     <section class="project-info">
-      <label>
-        <span>Client Company</span>
-        <input id="customerName" type="text" value="Acme Project Company">
-      </label>
+      <input id="customerName" type="text" value="Project Management" aria-label="">
+      <button id="addProjectBtn" class="icon-button add-project-inline" type="button" title="Add project">
+        <i class="fa-solid fa-plus"></i>
+      </button>
 
       <div class="controls">
-        <span class="control-title">View Mode</span>
         <div class="segment-control" aria-label="View mode">
           <button class="segment-button is-active" type="button" data-view-mode="full">Full Project</button>
-          <button class="segment-button" type="button" data-view-mode="month">This Month</button>
+          <button class="segment-button" type="button" data-view-mode="last3">Last 3 Month</button>
+          <button id="toggleSettingBtn" class="segment-button" type="button">Hide Setting</button>
+          <button id="captureBoardBtn" class="segment-button capture-board" type="button" title="Capture board" disabled>
+            <i class="fa-solid fa-camera"></i>
+          </button>
         </div>
       </div>
     </section>
+
+    <section id="editPanelHost" class="edit-panel-host"></section>
 
     <section class="board-shell">
       <div id="boardHead" class="table-head"></div>
