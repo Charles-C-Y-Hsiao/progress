@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Progress Board Program Flow</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7fb;
+      --paper: #ffffff;
+      --text: #1e293b;
+      --muted: #64748b;
+      --line: #d8e0eb;
+      --accent: #2563eb;
+      --code: #f1f5f9;
+      --radius: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      background: var(--bg);
+      font-family: "Segoe UI", "Noto Sans TC", Arial, sans-serif;
+      line-height: 1.65;
+    }
+
+    .shell {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      padding: 24px 18px;
+      border-right: 1px solid var(--line);
+      background: #eef3f9;
+      overflow: auto;
+    }
+
+    .sidebar h1 {
+      margin: 0 0 6px;
+      font-size: 20px;
+      line-height: 1.25;
+    }
+
+    .sidebar p {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .toc {
+      display: grid;
+      gap: 2px;
+    }
+
+    .toc a {
+      display: block;
+      padding: 7px 8px;
+      border-radius: 6px;
+      color: #334155;
+      font-size: 14px;
+      text-decoration: none;
+    }
+
+    .toc a:hover {
+      color: var(--accent);
+      background: #ffffff;
+    }
+
+    .content-wrap {
+      padding: 32px;
+    }
+
+    .content {
+      width: min(1120px, 100%);
+      margin: 0 auto;
+      padding: 36px 44px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--paper);
+      box-shadow: 0 18px 45px rgba(15, 23, 42, .08);
+    }
+
+    h1,
+    h2,
+    h3 {
+      line-height: 1.28;
+    }
+
+    h1 {
+      margin-top: 0;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--line);
+      font-size: 30px;
+    }
+
+    h2 {
+      margin-top: 42px;
+      padding-top: 10px;
+      border-top: 1px solid var(--line);
+      font-size: 24px;
+    }
+
+    h3 {
+      margin-top: 28px;
+      font-size: 18px;
+    }
+
+    a {
+      color: var(--accent);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0 24px;
+      font-size: 14px;
+    }
+
+    th,
+    td {
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      vertical-align: top;
+    }
+
+    th {
+      background: #f8fafc;
+      text-align: left;
+    }
+
+    code {
+      padding: 2px 5px;
+      border-radius: 4px;
+      background: var(--code);
+      font-family: Consolas, "Courier New", monospace;
+      font-size: .92em;
+    }
+
+    pre {
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--code);
+      overflow: auto;
+    }
+
+    pre code {
+      padding: 0;
+      background: transparent;
+    }
+
+    .mermaid {
+      margin: 22px 0 30px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #ffffff;
+      overflow: auto;
+      text-align: center;
+    }
+
+    .loading,
+    .error {
+      padding: 18px;
+      border-radius: var(--radius);
+      background: #fff7ed;
+      color: #9a3412;
+    }
+
+    @media (max-width: 900px) {
+      .shell {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: static;
+        height: auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .content-wrap {
+        padding: 16px;
+      }
+
+      .content {
+        padding: 24px 18px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <h1>Program Flow</h1>
+      <p>讀取 PROGRAM_FLOW.md 並使用 Mermaid CDN 渲染流程圖。</p>
+      <nav id="toc" class="toc" aria-label="Contents"></nav>
+    </aside>
+    <main class="content-wrap">
+      <article id="content" class="content">
+        <div class="loading">Loading PROGRAM_FLOW.md...</div>
+      </article>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+
+    const contentEl = document.getElementById('content');
+    const tocEl = document.getElementById('toc');
+
+    mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: 'loose',
+      theme: 'default',
+      flowchart: {
+        htmlLabels: true,
+        curve: 'basis',
+      },
+    });
+
+    marked.setOptions({
+      gfm: true,
+      breaks: false,
+      headerIds: false,
+      mangle: false,
+    });
+
+    function slugify(text) {
+      return text
+        .trim()
+        .toLowerCase()
+        .replace(/[^\p{L}\p{N}]+/gu, '-')
+        .replace(/^-+|-+$/g, '') || 'section';
+    }
+
+    function makeUniqueSlug(base, used) {
+      let slug = base;
+      let index = 2;
+      while (used.has(slug)) {
+        slug = `${base}-${index}`;
+        index += 1;
+      }
+      used.add(slug);
+      return slug;
+    }
+
+    function buildToc() {
+      const used = new Set();
+      const headings = [...contentEl.querySelectorAll('h1, h2, h3')];
+      tocEl.innerHTML = '';
+
+      headings.forEach((heading) => {
+        const slug = makeUniqueSlug(slugify(heading.textContent), used);
+        heading.id = slug;
+
+        if (heading.tagName === 'H1') return;
+
+        const link = document.createElement('a');
+        link.href = `#${slug}`;
+        link.textContent = heading.textContent;
+        link.style.paddingLeft = heading.tagName === 'H3' ? '20px' : '8px';
+        tocEl.appendChild(link);
+      });
+    }
+
+    function prepareMermaidBlocks() {
+      contentEl.querySelectorAll('pre code.language-mermaid').forEach((code, index) => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'mermaid';
+        wrapper.textContent = code.textContent;
+        wrapper.dataset.index = String(index);
+        code.closest('pre').replaceWith(wrapper);
+      });
+    }
+
+    async function loadDocument() {
+      try {
+        const response = await fetch('PROGRAM_FLOW.md', { cache: 'no-store' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const markdown = await response.text();
+        contentEl.innerHTML = marked.parse(markdown);
+        prepareMermaidBlocks();
+        buildToc();
+        await mermaid.run({ nodes: [...contentEl.querySelectorAll('.mermaid')] });
+      } catch (error) {
+        contentEl.innerHTML = `
+          <div class="error">
+            <strong>Unable to render PROGRAM_FLOW.md.</strong><br>
+            ${String(error.message || error)}
+          </div>
+        `;
+      }
+    }
+
+    loadDocument();
+  </script>
+</body>
+</html>

@@ -1,0 +1,160 @@
+{
+  "version": 1,
+  "accountId": "000666888",
+  "fileName": "000666888-progress-board.json",
+  "updatedAt": "2026-06-21T12:28:44.648Z",
+  "customerName": "Project Management",
+  "settingHidden": false,
+  "editorFieldsHidden": false,
+  "nowMarker": {
+    "label": "Now",
+    "labelY": 194.79998779296875
+  },
+  "projects": [
+    {
+      "id": "project-retail-store-interior-design",
+      "name": "Retail Store Interior Design",
+      "stage": "Close",
+      "startDate": "2026-06-21",
+      "durationDays": 90,
+      "progressDays": 64,
+      "flagsExpanded": true,
+      "markers": [
+        {
+          "id": "marker-retail-store-design-approval",
+          "startDay": 1,
+          "day": 22,
+          "label": "Design approval",
+          "boardHidden": false
+        },
+        {
+          "id": "marker-retail-store-acceptance",
+          "startDay": 10,
+          "day": 74,
+          "label": "Acceptance",
+          "boardHidden": false
+        },
+        {
+          "id": "37337014-7b9e-44c0-a5a5-2afd051f3f7d",
+          "startDay": 9,
+          "day": 90,
+          "label": "11",
+          "boardHidden": false
+        }
+      ],
+      "markerLinks": [
+        {
+          "id": "251caed5-5e7e-45ff-b770-0ce874c16ec1",
+          "fromMarkerId": "marker-retail-store-design-approval",
+          "fromPort": "left",
+          "toMarkerId": "marker-retail-store-acceptance",
+          "toPort": "left",
+          "offsetX": 0,
+          "offsetY": 0,
+          "elbowXRatio": 0,
+          "elbowYRatio": 0.47457629947339075,
+          "elbowDate": "2026-06-21"
+        },
+        {
+          "id": "e7f402aa-06d2-454d-bfaf-0a261d6b78b1",
+          "fromMarkerId": "marker-retail-store-design-approval",
+          "fromPort": "left",
+          "toMarkerId": "37337014-7b9e-44c0-a5a5-2afd051f3f7d",
+          "toPort": "left",
+          "offsetX": 0,
+          "offsetY": 0,
+          "elbowXRatio": 0,
+          "elbowYRatio": 0.7457627401513568,
+          "elbowDate": "2026-06-21"
+        }
+      ]
+    },
+    {
+      "id": "project-entertainment-venue-fit-out",
+      "name": "Entertainment Venue Fit-Out",
+      "stage": "Control",
+      "startDate": "2026-07-05",
+      "durationDays": 90,
+      "progressDays": 72,
+      "flagsExpanded": true,
+      "markers": [
+        {
+          "id": "marker-entertainment-venue-procurement",
+          "startDay": 1,
+          "day": 36,
+          "label": "Procurement",
+          "boardHidden": false
+        }
+      ],
+      "markerLinks": []
+    },
+    {
+      "id": "project-classroom-renovation-plan",
+      "name": "Classroom Renovation Plan",
+      "stage": "Start",
+      "startDate": "2026-07-19",
+      "durationDays": 90,
+      "progressDays": 18,
+      "flagsExpanded": true,
+      "markers": [
+        {
+          "id": "marker-classroom-renovation-draft",
+          "startDay": 1,
+          "day": 12,
+          "label": "Draft",
+          "boardHidden": false
+        }
+      ],
+      "markerLinks": []
+    },
+    {
+      "id": "project-medical-clinic-renovation",
+      "name": "Medical Clinic Renovation",
+      "stage": "Execute",
+      "startDate": "2026-06-11",
+      "durationDays": 90,
+      "progressDays": 54,
+      "flagsExpanded": false,
+      "markers": [
+        {
+          "id": "marker-medical-clinic-build",
+          "startDay": 1,
+          "day": 30,
+          "label": "Build",
+          "boardHidden": false
+        }
+      ],
+      "markerLinks": []
+    },
+    {
+      "id": "project-retail-display-planning",
+      "name": "Retail Display Planning",
+      "stage": "Plan",
+      "startDate": "2026-08-02",
+      "durationDays": 90,
+      "progressDays": 36,
+      "flagsExpanded": false,
+      "markers": [],
+      "markerLinks": []
+    },
+    {
+      "id": "project-cafe-interior-design",
+      "name": "Cafe Interior Design",
+      "stage": "Close",
+      "startDate": "2026-06-28",
+      "durationDays": 90,
+      "progressDays": 90,
+      "flagsExpanded": false,
+      "markers": [
+        {
+          "id": "marker-cafe-interior-opening",
+          "startDay": 1,
+          "day": 65,
+          "label": "Opening",
+          "boardHidden": false
+        }
+      ],
+      "markerLinks": []
+    }
+  ]
+}

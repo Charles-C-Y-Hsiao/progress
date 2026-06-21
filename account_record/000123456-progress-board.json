@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "accountId": "000123456",
+  "fileName": "000123456-progress-board.json",
+  "updatedAt": "2026-06-21T12:28:42.919Z",
+  "customerName": "Project Management",
+  "settingHidden": false,
+  "editorFieldsHidden": false,
+  "nowMarker": {
+    "label": "Now",
+    "labelY": 71.20002746582031
+  },
+  "projects": [
+    {
+      "id": "08b0b084-664a-447b-99ff-fe8aaedac015",
+      "name": "Retail Store Interior Design",
+      "stage": "Close",
+      "startDate": "2026-06-21",
+      "durationDays": 90,
+      "progressDays": 90,
+      "flagsExpanded": true,
+      "markers": [
+        {
+          "id": "648260c8-e19f-45c3-8cd6-95c4ba001161",
+          "startDay": 19,
+          "day": 50,
+          "label": "Design approval",
+          "boardHidden": false
+        },
+        {
+          "id": "c866cd6a-3b39-49ca-b58f-5ccb729eff1e",
+          "startDay": 15,
+          "day": 72,
+          "label": "Acceptance",
+          "boardHidden": false
+        },
+        {
+          "id": "522e4bc9-007a-48b5-9ef3-268b4a14b1cb",
+          "startDay": 13,
+          "day": 88,
+          "label": "111",
+          "boardHidden": false
+        }
+      ],
+      "markerLinks": [
+        {
+          "id": "7a813688-0014-4a56-9279-82c4e52c53de",
+          "fromMarkerId": "522e4bc9-007a-48b5-9ef3-268b4a14b1cb",
+          "fromPort": "left",
+          "toMarkerId": "c866cd6a-3b39-49ca-b58f-5ccb729eff1e",
+          "toPort": "left",
+          "offsetX": 0,
+          "offsetY": 0,
+          "elbowXRatio": 0,
+          "elbowYRatio": 0.47457629947339075,
+          "elbowDate": "2026-07-03"
+        },
+        {
+          "id": "caa70dbc-9be5-4241-a3e9-a5bb9dfee9ad",
+          "fromMarkerId": "522e4bc9-007a-48b5-9ef3-268b4a14b1cb",
+          "fromPort": "left",
+          "toMarkerId": "648260c8-e19f-45c3-8cd6-95c4ba001161",
+          "toPort": "left",
+          "offsetX": 0,
+          "offsetY": 0,
+          "elbowXRatio": 0,
+          "elbowYRatio": 0.20338985879542465,
+          "elbowDate": "2026-07-03"
+        }
+      ]
+    }
+  ]
+}

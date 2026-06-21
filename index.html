@@ -25,6 +25,10 @@
           <button id="captureBoardBtn" class="segment-button capture-board" type="button" title="Capture board" disabled>
             <i class="fa-solid fa-camera"></i>
           </button>
+          <button id="accountBtn" class="segment-button account-button" type="button" title="Switch account">
+            <i class="fa-regular fa-user"></i>
+            <span id="accountLabel">Hi, 000666888</span>
+          </button>
         </div>
       </div>
     </section>
@@ -54,6 +58,24 @@
       <div class="dialog-actions">
         <button value="cancel" type="button" id="cancelMarkerBtn">Cancel</button>
         <button value="confirm" type="submit">Add</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="accountDialog" class="marker-dialog account-dialog">
+    <form method="dialog" id="accountForm">
+      <h2>Account</h2>
+      <label>
+        <span>Switch Account</span>
+        <select id="accountSelect"></select>
+      </label>
+      <label>
+        <span>Add Account</span>
+        <input id="accountInput" type="text" maxlength="32" placeholder="000666888">
+      </label>
+      <div class="dialog-actions">
+        <button value="cancel" type="button" id="cancelAccountBtn">Cancel</button>
+        <button value="confirm" type="submit">Apply</button>
       </div>
     </form>
   </dialog>

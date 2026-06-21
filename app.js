@@ -49,13 +49,27 @@ const markerForm = document.getElementById('markerForm');
 const markerDate = document.getElementById('markerDate');
 const markerLabel = document.getElementById('markerLabel');
 const cancelMarkerBtn = document.getElementById('cancelMarkerBtn');
+const accountBtn = document.getElementById('accountBtn');
+const accountLabel = document.getElementById('accountLabel');
+const accountDialog = document.getElementById('accountDialog');
+const accountForm = document.getElementById('accountForm');
+const accountSelect = document.getElementById('accountSelect');
+const accountInput = document.getElementById('accountInput');
+const cancelAccountBtn = document.getElementById('cancelAccountBtn');
 
-const STORAGE_KEY = 'project-management-progress-state';
+const DEFAULT_ACCOUNT_ID = '000666888';
+const STATE_FILE_SUFFIX = 'progress-board.json';
+const STATE_API_URL = '/api/progress-board';
+const ACCOUNTS_API_URL = '/api/accounts';
+const LAST_ACCOUNT_API_URL = '/api/last-account';
+const LAST_ACCOUNT_STORAGE_KEY = 'progress-board-last-account';
 const DEFAULT_NOW_MARKER = {
   label: 'Now',
   labelY: 58,
 };
 
+let activeAccountId = DEFAULT_ACCOUNT_ID;
+let availableAccounts = [DEFAULT_ACCOUNT_ID];
 let viewMode = 'full';
 let settingHidden = false;
 let editorFieldsHidden = false;
@@ -65,28 +79,33 @@ let activeConnectorId = null;
 let pendingConnectorPort = null;
 let boardMarkerFrame = null;
 let nowMarker = { ...DEFAULT_NOW_MARKER };
+let saveFileTimer = null;
 
 const today = startOfDay(new Date());
 
-let projects = [
-  createProject('Retail Store Interior Design', 'Close', 90, 90, 0, [
+let projects = getDefaultProjects();
+
+function getDefaultProjects() {
+  return [
+    createProject('Retail Store Interior Design', 'Close', 90, 90, 0, [
     createMarker(22, 'Design approval', 90),
     createMarker(74, 'Acceptance', 90),
-  ]),
-  createProject('Entertainment Venue Fit-Out', 'Control', 72, 90, 14, [
+    ]),
+    createProject('Entertainment Venue Fit-Out', 'Control', 72, 90, 14, [
     createMarker(36, 'Procurement', 90),
-  ]),
-  createProject('Classroom Renovation Plan', 'Start', 18, 90, 28, [
+    ]),
+    createProject('Classroom Renovation Plan', 'Start', 18, 90, 28, [
     createMarker(12, 'Draft', 90),
-  ]),
-  createProject('Medical Clinic Renovation', 'Execute', 54, 90, -10, [
+    ]),
+    createProject('Medical Clinic Renovation', 'Execute', 54, 90, -10, [
     createMarker(30, 'Build', 90),
-  ]),
-  createProject('Retail Display Planning', 'Plan', 36, 90, 42, []),
-  createProject('Cafe Interior Design', 'Close', 90, 90, 7, [
+    ]),
+    createProject('Retail Display Planning', 'Plan', 36, 90, 42, []),
+    createProject('Cafe Interior Design', 'Close', 90, 90, 7, [
     createMarker(65, 'Opening', 90),
-  ]),
-];
+    ]),
+  ];
+}
 
 function createProject(name, stage, progressDays, durationDays = DEFAULT_DURATION_DAYS, startOffsetDays = 0, markers = []) {
   const safeDuration = Math.max(1, Math.round(durationDays));
@@ -117,82 +136,292 @@ function createMarker(day, label, durationDays = DEFAULT_DURATION_DAYS) {
   };
 }
 
-function saveState() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      customerName: customerName.value,
-      settingHidden,
-      editorFieldsHidden,
-      nowMarker,
-      projects,
+function serializeState() {
+  return {
+    version: 1,
+    accountId: activeAccountId,
+    fileName: getStateFileName(),
+    updatedAt: new Date().toISOString(),
+    customerName: customerName.value,
+    settingHidden,
+    editorFieldsHidden,
+    nowMarker: {
+      label: nowMarker.label,
+      labelY: nowMarker.labelY,
+    },
+    projects: projects.map((project) => ({
+      id: project.id,
+      name: project.name,
+      stage: project.stage,
+      startDate: project.startDate,
+      durationDays: project.durationDays,
+      progressDays: project.progressDays,
+      flagsExpanded: project.flagsExpanded,
+      markers: project.markers.map((marker) => ({
+        id: marker.id,
+        startDay: marker.startDay,
+        day: marker.day,
+        label: marker.label,
+        boardHidden: marker.boardHidden,
+      })),
+      markerLinks: project.markerLinks.map((link) => ({
+        id: link.id,
+        fromMarkerId: link.fromMarkerId,
+        fromPort: link.fromPort,
+        toMarkerId: link.toMarkerId,
+        toPort: link.toPort,
+        offsetX: link.offsetX,
+        offsetY: link.offsetY,
+        elbowXRatio: link.elbowXRatio,
+        elbowYRatio: link.elbowYRatio,
+        elbowDate: link.elbowDate,
+      })),
+    })),
+  };
+}
+
+function hydrateState(state) {
+  if (!state || typeof state !== 'object') return;
+
+  if (typeof state.customerName === 'string') {
+    customerName.value = state.customerName;
+  }
+  if (typeof state.settingHidden === 'boolean') {
+    settingHidden = state.settingHidden;
+  }
+  if (typeof state.editorFieldsHidden === 'boolean') {
+    editorFieldsHidden = state.editorFieldsHidden;
+  }
+  if (state.nowMarker && typeof state.nowMarker === 'object') {
+    nowMarker = {
+      label: typeof state.nowMarker.label === 'string' && state.nowMarker.label.trim()
+        ? state.nowMarker.label
+        : DEFAULT_NOW_MARKER.label,
+      labelY: Number.isFinite(Number(state.nowMarker.labelY))
+        ? Number(state.nowMarker.labelY)
+        : DEFAULT_NOW_MARKER.labelY,
+    };
+  }
+  if (Array.isArray(state.projects)) {
+    projects = state.projects.map((project) => ({
+      id: project.id || crypto.randomUUID(),
+      name: project.name || 'Untitled Project',
+      stage: project.stage || 'Plan',
+      startDate: project.startDate || formatDate(today),
+      durationDays: Math.max(1, Math.round(Number(project.durationDays || DEFAULT_DURATION_DAYS))),
+      progressDays: Math.max(1, Math.round(Number(project.progressDays || 1))),
+      flagsExpanded: Boolean(project.flagsExpanded),
+      markers: Array.isArray(project.markers)
+        ? project.markers.map((marker) => ({
+          id: marker.id || crypto.randomUUID(),
+          startDay: Math.max(1, Math.round(Number(marker.startDay || 1))),
+          day: Math.max(1, Math.round(Number(marker.day || 1))),
+          label: marker.label || '',
+          boardHidden: Boolean(marker.boardHidden),
+        }))
+        : [],
+      markerLinks: Array.isArray(project.markerLinks)
+        ? project.markerLinks.map((link) => ({
+          id: link.id || crypto.randomUUID(),
+          fromMarkerId: link.fromMarkerId || '',
+          fromPort: link.fromPort || 'right',
+          toMarkerId: link.toMarkerId || '',
+          toPort: link.toPort || 'left',
+          offsetX: Math.round(Number(link.offsetX || 0)),
+          offsetY: Math.round(Number(link.offsetY || 0)),
+          elbowXRatio: Number.isFinite(Number(link.elbowXRatio)) ? Number(link.elbowXRatio) : null,
+          elbowYRatio: Number.isFinite(Number(link.elbowYRatio)) ? Number(link.elbowYRatio) : null,
+          elbowDate: typeof link.elbowDate === 'string' ? link.elbowDate : '',
+        }))
+        : [],
     }));
-  } catch (error) {
-    console.warn('Unable to save project state', error);
   }
 }
 
-function loadState() {
-  try {
-    const rawState = localStorage.getItem(STORAGE_KEY);
-    if (!rawState) return;
+function resetStateToDefault() {
+  customerName.value = 'Project Management';
+  settingHidden = false;
+  editorFieldsHidden = false;
+  activeMarkerProjectId = null;
+  editingProjectId = null;
+  activeConnectorId = null;
+  pendingConnectorPort = null;
+  nowMarker = { ...DEFAULT_NOW_MARKER };
+  projects = getDefaultProjects();
+}
 
-    const state = JSON.parse(rawState);
-    if (typeof state.customerName === 'string') {
-      customerName.value = state.customerName;
+function getStateFileName(accountId = activeAccountId) {
+  return `${accountId}-${STATE_FILE_SUFFIX}`;
+}
+
+function getStorageKey(accountId = activeAccountId) {
+  return `${accountId}-progress-board-state`;
+}
+
+function getAccountIdFromFileName(fileName) {
+  return String(fileName || '').split('-')[0] || DEFAULT_ACCOUNT_ID;
+}
+
+function normalizeAccountId(value) {
+  return String(value || '').trim().replace(/[^a-zA-Z0-9_]/g, '');
+}
+
+function updateAccountControls() {
+  accountLabel.textContent = `Hi, ${activeAccountId}`;
+  accountSelect.innerHTML = availableAccounts
+    .map((accountId) => `<option value="${escapeAttr(accountId)}" ${accountId === activeAccountId ? 'selected' : ''}>${escapeHtml(accountId)}</option>`)
+    .join('');
+}
+
+function rememberActiveAccount() {
+  try {
+    localStorage.setItem(LAST_ACCOUNT_STORAGE_KEY, activeAccountId);
+  } catch (error) {
+    console.warn('Unable to remember account locally', error);
+  }
+  saveLastAccountFile(activeAccountId);
+}
+
+async function loadLastAccount() {
+  try {
+    const response = await fetch(LAST_ACCOUNT_API_URL, { cache: 'no-store' });
+    if (response.ok) {
+      const data = await response.json();
+      const savedAccountId = normalizeAccountId(data.accountId);
+      if (savedAccountId) {
+        activeAccountId = savedAccountId;
+        return;
+      }
     }
-    if (typeof state.settingHidden === 'boolean') {
-      settingHidden = state.settingHidden;
+  } catch (error) {
+    console.warn('Unable to load last account file', error);
+  }
+
+  try {
+    const savedAccountId = normalizeAccountId(localStorage.getItem(LAST_ACCOUNT_STORAGE_KEY));
+    if (savedAccountId) activeAccountId = savedAccountId;
+  } catch (error) {
+    console.warn('Unable to load last account locally', error);
+  }
+}
+
+async function saveLastAccountFile(accountId) {
+  try {
+    await fetch(LAST_ACCOUNT_API_URL, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ accountId }),
+    });
+  } catch (error) {
+    console.warn('Unable to save last account file', error);
+  }
+}
+
+function saveState() {
+  const state = serializeState();
+  try {
+    localStorage.setItem(getStorageKey(), JSON.stringify(state));
+  } catch (error) {
+    console.warn('Unable to save project state', error);
+  }
+  scheduleStateFileSave(state);
+}
+
+async function loadState() {
+  try {
+    const fileState = await loadStateFile();
+    if (fileState) {
+      hydrateState(fileState);
+      return;
     }
-    if (typeof state.editorFieldsHidden === 'boolean') {
-      editorFieldsHidden = state.editorFieldsHidden;
-    }
-    if (state.nowMarker && typeof state.nowMarker === 'object') {
-      nowMarker = {
-        label: typeof state.nowMarker.label === 'string' && state.nowMarker.label.trim()
-          ? state.nowMarker.label
-          : DEFAULT_NOW_MARKER.label,
-        labelY: Number.isFinite(Number(state.nowMarker.labelY))
-          ? Number(state.nowMarker.labelY)
-          : DEFAULT_NOW_MARKER.labelY,
-      };
-    }
-    if (Array.isArray(state.projects)) {
-      projects = state.projects.map((project) => ({
-        id: project.id || crypto.randomUUID(),
-        name: project.name || 'Untitled Project',
-        stage: project.stage || 'Plan',
-        startDate: project.startDate || formatDate(today),
-        durationDays: Math.max(1, Math.round(Number(project.durationDays || DEFAULT_DURATION_DAYS))),
-        progressDays: Math.max(1, Math.round(Number(project.progressDays || 1))),
-        flagsExpanded: Boolean(project.flagsExpanded),
-        markers: Array.isArray(project.markers)
-          ? project.markers.map((marker) => ({
-            id: marker.id || crypto.randomUUID(),
-            startDay: Math.max(1, Math.round(Number(marker.startDay || 1))),
-            day: Math.max(1, Math.round(Number(marker.day || 1))),
-            label: marker.label || '',
-            boardHidden: Boolean(marker.boardHidden),
-          }))
-          : [],
-        markerLinks: Array.isArray(project.markerLinks)
-          ? project.markerLinks.map((link) => ({
-            id: link.id || crypto.randomUUID(),
-            fromMarkerId: link.fromMarkerId || '',
-            fromPort: link.fromPort || 'right',
-            toMarkerId: link.toMarkerId || '',
-            toPort: link.toPort || 'left',
-            offsetX: Math.round(Number(link.offsetX || 0)),
-            offsetY: Math.round(Number(link.offsetY || 0)),
-            elbowXRatio: Number.isFinite(Number(link.elbowXRatio)) ? Number(link.elbowXRatio) : null,
-            elbowYRatio: Number.isFinite(Number(link.elbowYRatio)) ? Number(link.elbowYRatio) : null,
-            elbowDate: typeof link.elbowDate === 'string' ? link.elbowDate : '',
-          }))
-          : [],
-      }));
-    }
+
+    const rawState = localStorage.getItem(getStorageKey());
+    if (rawState) hydrateState(JSON.parse(rawState));
   } catch (error) {
     console.warn('Unable to load project state', error);
   }
+}
+
+async function loadStateFile() {
+  try {
+    const response = await fetch(`${STATE_API_URL}?account=${encodeURIComponent(activeAccountId)}`, { cache: 'no-store' });
+    if (!response.ok) return null;
+    const state = await response.json();
+    if (state.fileName) activeAccountId = getAccountIdFromFileName(state.fileName);
+    return state;
+  } catch (error) {
+    console.warn(`Unable to load ${getStateFileName()}`, error);
+    return null;
+  }
+}
+
+function scheduleStateFileSave(state) {
+  window.clearTimeout(saveFileTimer);
+  saveFileTimer = window.setTimeout(() => {
+    saveStateFile(state);
+  }, 400);
+}
+
+async function saveStateFile(state) {
+  try {
+    const response = await fetch(`${STATE_API_URL}?account=${encodeURIComponent(activeAccountId)}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(state),
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+  } catch (error) {
+    console.warn(`Unable to save ${getStateFileName()}`, error);
+  }
+}
+
+async function loadAccountList() {
+  try {
+    const response = await fetch(ACCOUNTS_API_URL, { cache: 'no-store' });
+    if (!response.ok) return;
+    const data = await response.json();
+    if (Array.isArray(data.accounts) && data.accounts.length) {
+      availableAccounts = [...new Set(data.accounts.map((item) => normalizeAccountId(item)).filter(Boolean))];
+    }
+  } catch (error) {
+    console.warn('Unable to load account list', error);
+  } finally {
+    if (!availableAccounts.includes(activeAccountId)) availableAccounts.unshift(activeAccountId);
+    updateAccountControls();
+  }
+}
+
+async function switchAccount(nextAccountId, createIfMissing = false) {
+  const normalizedAccountId = normalizeAccountId(nextAccountId);
+  if (!normalizedAccountId) return;
+
+  await saveStateFile(serializeState());
+  activeAccountId = normalizedAccountId;
+  rememberActiveAccount();
+  if (!availableAccounts.includes(activeAccountId)) availableAccounts.push(activeAccountId);
+
+  const fileState = await loadStateFile();
+  if (fileState) {
+    hydrateState(fileState);
+  } else if (createIfMissing) {
+    resetStateToDefault();
+    await saveStateFile(serializeState());
+  } else {
+    const rawState = localStorage.getItem(getStorageKey());
+    if (rawState) hydrateState(JSON.parse(rawState));
+  }
+
+  editingProjectId = null;
+  activeConnectorId = null;
+  fitCompanyInput();
+  updateAccountControls();
+  render();
 }
 
 function startOfDay(date) {
@@ -1958,8 +2187,6 @@ function downloadUrl(url, filename) {
   link.remove();
 }
 
-loadState();
-
 addProjectBtn.addEventListener('click', () => {
   const project = createProject('New Project', 'Plan', 1, DEFAULT_DURATION_DAYS, 0, []);
   projects.unshift(project);
@@ -2014,6 +2241,22 @@ markerForm.addEventListener('submit', (event) => {
 
 cancelMarkerBtn.addEventListener('click', () => markerDialog.close());
 
+accountBtn.addEventListener('click', () => {
+  accountInput.value = '';
+  updateAccountControls();
+  accountDialog.showModal();
+});
+
+accountForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const nextAccountId = normalizeAccountId(accountInput.value) || accountSelect.value;
+  const createIfMissing = Boolean(normalizeAccountId(accountInput.value));
+  await switchAccount(nextAccountId, createIfMissing);
+  accountDialog.close();
+});
+
+cancelAccountBtn.addEventListener('click', () => accountDialog.close());
+
 function fitCompanyInput() {
   const length = Math.max(customerName.value.length, 8);
   customerName.style.width = `${length + 1}ch`;
@@ -2032,4 +2275,14 @@ window.addEventListener('resize', () => {
   scheduleBoardMarkerDisplay();
 });
 
-render();
+async function initializeApp() {
+  await loadLastAccount();
+  await loadAccountList();
+  await loadState();
+  rememberActiveAccount();
+  fitCompanyInput();
+  updateAccountControls();
+  render();
+}
+
+initializeApp();
