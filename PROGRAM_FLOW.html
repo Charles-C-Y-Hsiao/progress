@@ -27,6 +27,7 @@
       background: var(--bg);
       font-family: "Segoe UI", "Noto Sans TC", Arial, sans-serif;
       line-height: 1.65;
+      overflow-x: hidden;
     }
 
     .shell {
@@ -147,6 +148,8 @@
       padding: 10px 12px;
       border: 1px solid var(--line);
       vertical-align: top;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
 
     th {
@@ -168,6 +171,8 @@
       border-radius: 6px;
       background: var(--code);
       overflow: auto;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
     }
 
     pre code {
@@ -183,6 +188,11 @@
       background: #ffffff;
       overflow: auto;
       text-align: center;
+    }
+
+    .mermaid svg {
+      max-width: 100%;
+      height: auto;
     }
 
     .loading,
@@ -232,6 +242,105 @@
 
       .content {
         padding: 24px 18px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      body,
+      .shell,
+      .content-wrap,
+      .content {
+        max-width: 100vw;
+        overflow-x: hidden;
+      }
+
+      .sidebar {
+        padding: 10px 12px;
+      }
+
+      .content-wrap {
+        padding: 124px 10px 14px;
+        scroll-padding-top: 124px;
+      }
+
+      .content {
+        padding: 20px 14px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+
+      h2 {
+        font-size: 20px;
+      }
+
+      h3 {
+        font-size: 17px;
+      }
+
+      table,
+      thead,
+      tbody,
+      tr,
+      th,
+      td {
+        display: block;
+        width: 100%;
+      }
+
+      table {
+        border: 0;
+        font-size: 14px;
+      }
+
+      thead {
+        display: none;
+      }
+
+      tr {
+        margin: 0 0 12px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: #ffffff;
+        overflow: hidden;
+      }
+
+      th,
+      td {
+        border: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      tr > :last-child {
+        border-bottom: 0;
+      }
+
+      td:first-child,
+      th:first-child {
+        color: #0f172a;
+        background: #f8fafc;
+        font-weight: 700;
+      }
+
+      pre {
+        padding: 12px;
+        overflow-x: hidden;
+      }
+
+      code {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+
+      .mermaid {
+        padding: 10px;
+        overflow-x: hidden;
+      }
+
+      .mermaid svg {
+        width: 100% !important;
+        max-width: 100% !important;
       }
     }
   </style>
