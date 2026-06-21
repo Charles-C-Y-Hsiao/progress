@@ -57,6 +57,10 @@
       font-size: 13px;
     }
 
+    .mobile-toc {
+      display: none;
+    }
+
     .toc {
       display: grid;
       gap: 2px;
@@ -74,6 +78,18 @@
     .toc a:hover {
       color: var(--accent);
       background: #ffffff;
+    }
+
+    .mobile-toc select {
+      width: 100%;
+      height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 0 10px;
+      color: var(--text);
+      background: #ffffff;
+      font: inherit;
+      font-size: 14px;
     }
 
     .content-wrap {
@@ -183,14 +199,35 @@
       }
 
       .sidebar {
-        position: static;
+        position: fixed;
+        z-index: 20;
         height: auto;
+        width: 100%;
+        padding: 12px 14px;
         border-right: 0;
         border-bottom: 1px solid var(--line);
+        box-shadow: 0 8px 24px rgba(15, 23, 42, .08);
+      }
+
+      .sidebar h1 {
+        font-size: 16px;
+      }
+
+      .sidebar p,
+      .toc {
+        display: none;
+      }
+
+      .mobile-toc {
+        display: block;
+        margin-top: 10px;
       }
 
       .content-wrap {
-        padding: 16px;
+        height: 100vh;
+        padding: 128px 12px 16px;
+        overflow: auto;
+        scroll-padding-top: 128px;
       }
 
       .content {
@@ -204,6 +241,11 @@
     <aside class="sidebar">
       <h1>Program Flow</h1>
       <p>讀取 PROGRAM_FLOW.md 並使用 Mermaid CDN 渲染流程圖。</p>
+      <div class="mobile-toc">
+        <select id="sectionSelect" aria-label="Select section">
+          <option value="">章節目錄</option>
+        </select>
+      </div>
       <nav id="toc" class="toc" aria-label="Contents"></nav>
     </aside>
     <main class="content-wrap">
@@ -219,6 +261,8 @@
 
     const contentEl = document.getElementById('content');
     const tocEl = document.getElementById('toc');
+    const sectionSelect = document.getElementById('sectionSelect');
+    const contentWrap = document.querySelector('.content-wrap');
 
     mermaid.initialize({
       startOnLoad: false,
@@ -260,6 +304,7 @@
       const used = new Set();
       const headings = [...contentEl.querySelectorAll('h1, h2, h3')];
       tocEl.innerHTML = '';
+      sectionSelect.innerHTML = '<option value="">章節目錄</option>';
 
       headings.forEach((heading) => {
         const slug = makeUniqueSlug(slugify(heading.textContent), used);
@@ -272,8 +317,40 @@
         link.textContent = heading.textContent;
         link.style.paddingLeft = heading.tagName === 'H3' ? '20px' : '8px';
         tocEl.appendChild(link);
+
+        const option = document.createElement('option');
+        option.value = slug;
+        option.textContent = `${heading.tagName === 'H3' ? '  - ' : ''}${heading.textContent}`;
+        sectionSelect.appendChild(option);
       });
     }
+
+    function scrollToSection(sectionId) {
+      const target = document.getElementById(sectionId);
+      if (!target) return;
+
+      if (window.matchMedia('(max-width: 900px)').matches) {
+        const top = target.offsetTop - contentEl.offsetTop;
+        contentWrap.scrollTo({
+          top: Math.max(0, top - 12),
+          behavior: 'smooth',
+        });
+        return;
+      }
+
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    sectionSelect.addEventListener('change', () => {
+      if (!sectionSelect.value) return;
+      scrollToSection(sectionSelect.value);
+      history.replaceState(null, '', `#${sectionSelect.value}`);
+    });
+
+    window.addEventListener('hashchange', () => {
+      const sectionId = decodeURIComponent(location.hash.slice(1));
+      if (sectionId) scrollToSection(sectionId);
+    });
 
     function prepareMermaidBlocks() {
       contentEl.querySelectorAll('pre code.language-mermaid').forEach((code, index) => {
@@ -295,6 +372,11 @@
         prepareMermaidBlocks();
         buildToc();
         await mermaid.run({ nodes: [...contentEl.querySelectorAll('.mermaid')] });
+        if (location.hash) {
+          requestAnimationFrame(() => {
+            scrollToSection(decodeURIComponent(location.hash.slice(1)));
+          });
+        }
       } catch (error) {
         contentEl.innerHTML = `
           <div class="error">
