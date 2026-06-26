@@ -46,7 +46,8 @@ const toggleSettingBtn = document.getElementById('toggleSettingBtn');
 const captureBoardBtn = document.getElementById('captureBoardBtn');
 const markerDialog = document.getElementById('markerDialog');
 const markerForm = document.getElementById('markerForm');
-const markerDate = document.getElementById('markerDate');
+const markerStartDate = document.getElementById('markerStartDate');
+const markerEndDate = document.getElementById('markerEndDate');
 const markerLabel = document.getElementById('markerLabel');
 const cancelMarkerBtn = document.getElementById('cancelMarkerBtn');
 const accountBtn = document.getElementById('accountBtn');
@@ -73,6 +74,7 @@ let availableAccounts = [DEFAULT_ACCOUNT_ID];
 let viewMode = 'full';
 let settingHidden = false;
 let editorFieldsHidden = false;
+let editorFieldsEditable = false;
 let activeMarkerProjectId = null;
 let editingProjectId = null;
 let activeConnectorId = null;
@@ -126,11 +128,12 @@ function createProject(name, stage, progressDays, durationDays = DEFAULT_DURATIO
   };
 }
 
-function createMarker(day, label, durationDays = DEFAULT_DURATION_DAYS) {
+function createMarker(day, label, durationDays = DEFAULT_DURATION_DAYS, startDay = 1) {
+  const safeDay = clamp(Math.round(day), 1, durationDays);
   return {
     id: crypto.randomUUID(),
-    startDay: 1,
-    day: clamp(Math.round(day), 1, durationDays),
+    startDay: clamp(Math.round(startDay), 1, safeDay),
+    day: safeDay,
     label,
     boardHidden: false,
   };
@@ -242,6 +245,7 @@ function resetStateToDefault() {
   customerName.value = 'Project Management';
   settingHidden = false;
   editorFieldsHidden = false;
+  editorFieldsEditable = false;
   activeMarkerProjectId = null;
   editingProjectId = null;
   activeConnectorId = null;
@@ -760,6 +764,7 @@ function renderRow(project) {
   });
 
   row.querySelector('.edit-project').addEventListener('click', () => {
+    if (!isEditing) editorFieldsEditable = false;
     editingProjectId = isEditing ? null : project.id;
     render();
   });
@@ -777,11 +782,16 @@ function renderEditPanel() {
 
   editPanelHost.hidden = false;
   editPanelHost.innerHTML = `
-    <div class="edit-block ${editorFieldsHidden ? 'is-fields-hidden' : ''}">
+    <div class="edit-block ${editorFieldsHidden ? 'is-fields-hidden' : ''} ${editorFieldsEditable ? 'is-fields-editable' : 'is-fields-locked'}">
       <div class="edit-progress-row">
         ${renderEditProgress(project)}
       </div>
       <div class="edit-fields-row">
+        <div class="edit-unlock-cell">
+          <button class="small-button toggle-editor-edit ${editorFieldsEditable ? 'is-active' : ''}" type="button" title="${editorFieldsEditable ? 'Lock project fields' : 'Edit project fields'}" aria-pressed="${editorFieldsEditable}">
+            <i class="fa-regular fa-pen-to-square"></i>
+          </button>
+        </div>
         ${renderEditorFields(project)}
       </div>
       <div class="edit-actions-row">
@@ -806,14 +816,21 @@ function renderEditPanel() {
 
   editPanelHost.querySelector('.close-editor').addEventListener('click', () => {
     editingProjectId = null;
+    editorFieldsEditable = false;
     render();
   });
   editPanelHost.querySelector('.cancel-editor').addEventListener('click', () => {
     editingProjectId = null;
+    editorFieldsEditable = false;
+    render();
+  });
+  editPanelHost.querySelector('.toggle-editor-edit').addEventListener('click', () => {
+    editorFieldsEditable = !editorFieldsEditable;
     render();
   });
   editPanelHost.querySelector('.toggle-editor-fields').addEventListener('click', () => {
     editorFieldsHidden = !editorFieldsHidden;
+    if (!editorFieldsHidden) editorFieldsEditable = false;
     saveState();
     render();
   });
@@ -967,14 +984,15 @@ function renderEditProgress(project) {
 }
 
 function renderEditorFields(project) {
+  const disabled = editorFieldsEditable ? '' : 'disabled';
   return `
       <label>
         <span>Project Name</span>
-        <input class="name-input" type="text" value="${escapeAttr(project.name)}">
+        <input class="name-input" type="text" value="${escapeAttr(project.name)}" ${disabled}>
       </label>
       <label>
         <span>Stage</span>
-        <select class="stage-select">
+        <select class="stage-select" ${disabled}>
           ${['Plan', 'Start', 'Execute', 'Control', 'Close'].map((stage) => (
             `<option value="${stage}" ${stage === project.stage ? 'selected' : ''}>${stage}</option>`
           )).join('')}
@@ -982,11 +1000,11 @@ function renderEditorFields(project) {
       </label>
       <label>
         <span>Start Date</span>
-        <input class="start-input" type="date" value="${project.startDate}">
+        <input class="start-input" type="date" value="${project.startDate}" ${disabled}>
       </label>
       <label>
         <span>Project Duration</span>
-        <input class="duration-input" type="number" min="1" step="1" value="${project.durationDays}">
+        <input class="duration-input" type="number" min="1" step="1" value="${project.durationDays}" ${disabled}>
       </label>
       <label>
         <span>End Date</span>
@@ -1020,14 +1038,24 @@ function bindEditor(row, project) {
 
   row.querySelector('.add-marker').addEventListener('click', () => {
     activeMarkerProjectId = project.id;
-    markerDate.value = formatDate(dateFromProjectDay(project, project.progressDays));
+    const defaultDate = formatDate(dateFromProjectDay(project, project.progressDays));
+    markerStartDate.value = defaultDate;
+    markerEndDate.value = defaultDate;
+    markerStartDate.min = project.startDate;
+    markerStartDate.max = projectEndDate(project);
+    markerEndDate.min = project.startDate;
+    markerEndDate.max = projectEndDate(project);
     markerLabel.value = '';
     markerDialog.showModal();
   });
 
   row.querySelector('.delete-project').addEventListener('click', () => {
+    const projectLabel = project.name ? `「${project.name}」` : '這個專案';
+    if (!window.confirm(`確定要刪除${projectLabel}嗎？`)) return;
+
     projects = projects.filter((item) => item.id !== project.id);
     editingProjectId = null;
+    editorFieldsEditable = false;
     render();
   });
 
@@ -1097,14 +1125,17 @@ function renderMarker(marker, project, padDays = 0, totalDays = project.duration
   const markerSpanDays = Math.max(1, marker.day - startDay + 1);
   const completeDays = clamp(project.progressDays - startDay + 1, 0, markerSpanDays);
   const fillWidth = `${(completeDays / markerSpanDays) * 100}%`;
+  const markerStartDateObj = dateFromProjectDay(project, startDay);
   const markerDateObj = dateFromProjectDay(project, marker.day);
   const date = formatDate(markerDateObj);
+  const startDisplayDate = markerDateLabel(markerStartDateObj);
   const displayDate = markerDateLabel(markerDateObj);
   const labelWidth = markerLabelWidth(marker.label, displayDate);
   return `
     <div class="marker marker-task-row ${marker.boardHidden ? 'is-board-hidden' : ''}" style="--marker-row: ${index}; --marker-start-left: ${startLeft}; --marker-point-left: ${pointLeft}; --marker-mid-left: ${midLeft}; --marker-top-port-1: ${topPortOneLeft}; --marker-top-port-2: ${topPortTwoLeft}; --marker-track-left: ${trackLeft}; --marker-track-width: ${trackWidth}; --marker-fill-width: ${fillWidth}" data-marker-id="${marker.id}">
       <div class="marker-task-track" aria-hidden="true">
         <span class="marker-task-fill"></span>
+        <span class="marker-start-date-display">${startDisplayDate}</span>
       </div>
       <button class="marker-port marker-port-top marker-port-top-1" type="button" data-marker-id="${marker.id}" data-port="top-1" title="Connect from top"></button>
       <button class="marker-port marker-port-top marker-port-top-2" type="button" data-marker-id="${marker.id}" data-port="top-2" title="Connect from top"></button>
@@ -1408,6 +1439,7 @@ function setupMarkerInteract() {
         const markerSpanDays = Math.max(1, markerDay - startDay + 1);
         const completeDays = clamp(project.progressDays - startDay + 1, 0, markerSpanDays);
         const fillWidth = `${(completeDays / markerSpanDays) * 100}%`;
+        const startDate = formatDate(dateFromProjectDay(project, startDay));
         const date = formatDate(dateFromProjectDay(project, markerDay));
 
         markerEl.style.setProperty('--marker-start-left', startLeft);
@@ -1417,8 +1449,9 @@ function setupMarkerInteract() {
         markerEl.style.setProperty('--marker-fill-width', fillWidth);
         markerEl.dataset.pendingStartDay = String(startDay);
         markerEl.dataset.pendingDay = String(markerDay);
+        markerEl.querySelector('.marker-start-date-display').textContent = markerDateLabel(dateFromProjectDay(project, startDay));
         markerEl.querySelector('.marker-date-display').textContent = markerDateLabel(dateFromProjectDay(project, markerDay));
-        markerEl.querySelector('.marker-label').title = `${date} ${marker.label}`;
+        markerEl.querySelector('.marker-label').title = `${startDate} - ${date} ${marker.label}`;
       }
 
       function onMove(moveEvent) {
@@ -2232,7 +2265,11 @@ markerForm.addEventListener('submit', (event) => {
   event.preventDefault();
   const project = projects.find((item) => item.id === activeMarkerProjectId);
   if (project) {
-    project.markers.push(createMarker(dayFromDate(project, markerDate.value), markerLabel.value.trim(), project.durationDays));
+    const startDay = dayFromDate(project, markerStartDate.value);
+    const endDay = dayFromDate(project, markerEndDate.value);
+    const markerStartDay = Math.min(startDay, endDay);
+    const markerEndDay = Math.max(startDay, endDay);
+    project.markers.push(createMarker(markerEndDay, markerLabel.value.trim(), project.durationDays, markerStartDay));
     project.markers.sort((a, b) => a.day - b.day);
     render();
   }
@@ -2240,6 +2277,18 @@ markerForm.addEventListener('submit', (event) => {
 });
 
 cancelMarkerBtn.addEventListener('click', () => markerDialog.close());
+
+markerStartDate.addEventListener('change', () => {
+  if (!markerEndDate.value || markerEndDate.value < markerStartDate.value) {
+    markerEndDate.value = markerStartDate.value;
+  }
+});
+
+markerEndDate.addEventListener('change', () => {
+  if (!markerStartDate.value || markerStartDate.value > markerEndDate.value) {
+    markerStartDate.value = markerEndDate.value;
+  }
+});
 
 accountBtn.addEventListener('click', () => {
   accountInput.value = '';
